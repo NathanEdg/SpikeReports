@@ -16,6 +16,7 @@ class OpenRouterClient:
         self.api_key = os.getenv('OPENROUTER_API_KEY')
         self.model = os.getenv('AI_MODEL', 'google/gemini-2.0-flash-exp:free')
         self.base_url = 'https://openrouter.ai/api/v1'
+        self.fallback_model = 'meta-llama/llama-3.3-70b-instruct:free'
         
         if not self.api_key:
             raise ValueError("OPENROUTER_API_KEY not found in environment variables")
@@ -37,14 +38,21 @@ class OpenRouterClient:
         for attempt in range(max_retries):
             try:
                 logger.info(f"Making OpenRouter API request (attempt {attempt + 1}/{max_retries})")
+
                 response = requests.post(
                     f'{self.base_url}/chat/completions',
                     headers=headers,
                     data=json.dumps(payload),
                     timeout=60
                 )
+
+                if response.status_code == 429:
+                    logger.warning("Rate limit hit. Switching to fallback model for this request.")
+                    payload['model'] = self.fallback_model
+                    continue
+
                 response.raise_for_status()
-                
+
                 data = response.json()
                 content = data['choices'][0]['message']['content']
                 logger.info("Successfully received response from OpenRouter")
@@ -110,46 +118,29 @@ Write ONLY the summary. Do not include meta-commentary, notes, or explanations a
 
 {summaries_text}
 
-Write a brief executive summary (2-3 paragraphs) covering:
-1. Overall accomplishments across all teams today
-2. Any cross-team themes or patterns
-3. Notable blockers or challenges
+Produce a concise executive summary using short, information-dense bullet points. Do NOT write paragraphs.
 
-Write ONLY the executive summary. Do not include notes, meta-commentary, placeholders, or instructions."""
-        
+Include exactly three sections:
+
+*Key Accomplishments (cross-team highlights only)*:
+• ...
+
+*Themes & Patterns (trends across multiple teams)*:
+• ...
+
+*Blockers & Risks (major issues requiring attention)*:
+• ...
+
+Use simple bullets (•) only. No bold, no italics, no code blocks, no special Markdown. Include the single astrisk (*) in the section headers.
+Focus on the most important, decision-relevant insights.  
+Write ONLY the bullet-point executive summary with the three sections.
+"""
+        logger.info(f"prompt for master report: {prompt}")
         messages = [
             {'role': 'user', 'content': prompt}
         ]
         
         logger.info("Generating master report from all channel summaries")
-        return self._make_request(messages)
-    
-    def summarize_meeting(self, channel_summaries: List[Dict[str, str]]) -> str:
-        """Generate a meeting summary answering specific questions based on team summaries."""
-        if not channel_summaries:
-            return "No meeting data available."
-        
-        # Combine all team summaries into a single text block
-        summaries_text = "\n\n".join([
-            f"**{summary['subteam']}** ({summary['report_count']} {'report' if summary['report_count'] == 1 else 'reports'}):\n{summary['summary']}"
-            for summary in channel_summaries
-        ])
-        
-        prompt = f"""Based on the following team summaries, answer the questions:
-
-1. What was accomplished in the previous meeting?
-2. Which goals were met or not met, and why?
-3. Identify any blockers or risks.
-4. What are the next‑meeting goals and projected milestones?
-
-Team Summaries:
-{summaries_text}
-
-Provide concise bullet points for each question."""
-        
-        messages = [{"role": "user", "content": prompt}]
-        
-        logger.info("Generating meeting summary using OpenRouter")
         return self._make_request(messages)
 
 # Global client instance

@@ -3,11 +3,13 @@ from apscheduler.triggers.cron import CronTrigger
 from slack_bolt import App
 from utils.storage import storage
 from utils.logger import logger
+from utils.database import summary_db
 from services.openrouter import openrouter_client
 import json
 import os
 import pytz
 import time
+from datetime import datetime
 
 def load_config():
     """Load configuration from JSON file."""
@@ -106,26 +108,14 @@ def generate_and_send_reports(app: App):
             
             logger.info(f"Posted master report to {master_channel}")
             
-            # Generate meeting summary and post as a thread reply
-            meeting_summary = openrouter_client.summarize_meeting(channel_summaries)
-            
-            # Post meeting summary as a threaded message
-            app.client.chat_postMessage(
-                channel=master_channel,
-                thread_ts=response["ts"],
-                text="📝 Meeting Summary",
-                blocks=[
-                    {
-                        "type": "section",
-                        "text": {
-                            "type": "mrkdwn",
-                            "text": meeting_summary
-                        }
-                    }
-                ]
+            # Save summary to database
+            report_date = datetime.now().strftime('%Y-%m-%d')
+            summary_db.save_summary(
+                date=report_date,
+                master_report=master_report,
+                channel_summaries=channel_summaries
             )
-            
-            logger.info("Posted meeting summary thread reply")
+            logger.info(f"Saved summary to database for {report_date}")
         
         # Clear all reports for the next day
         storage.clear_all()

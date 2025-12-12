@@ -4,8 +4,10 @@ from slack_bolt import App
 from slack_bolt.adapter.socket_mode import SocketModeHandler
 from handlers.report_action import register_report_action
 from handlers.message_collector import register_message_collector
+from handlers.app_home import register_app_home_handler
 from jobs.midnight_report import setup_scheduler, trigger_report_now
 from utils.logger import logger
+from utils.storage import storage
 
 # Load environment variables
 load_dotenv()
@@ -16,9 +18,14 @@ app = App(
     signing_secret=os.getenv("SLACK_SIGNING_SECRET")
 )
 
+# Load persisted data from database
+logger.info("Loading persisted collections and reports from database...")
+storage.load_from_database()
+
 # Register handlers
 register_report_action(app)
 register_message_collector(app)
+register_app_home_handler(app)
 
 # Set up scheduler
 scheduler = setup_scheduler(app)
