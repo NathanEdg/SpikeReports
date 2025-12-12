@@ -1,0 +1,15 @@
+{
+    "channels": [
+        {
+            "id": "C0871N54TNJ",
+            "name": "#dev-team",
+            "subteam": "Dev Team"
+        },
+        {
+            "id": "C089W0LU11N",
+            "name": "#mechanical-team",
+            "subteam": "Mechanical Team"
+        }
+    ],
+    "masterReportChannel": "C09AQ4C4Y56"
+}
