@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: reportbot-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: reportbot
+      POSTGRES_USER: reportbot
+      POSTGRES_PASSWORD: reportbot_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U reportbot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Reportbot Application
+  reportbot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: reportbot-app
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      # Slack Configuration
+      SLACK_BOT_TOKEN: ${SLACK_BOT_TOKEN}
+      SLACK_APP_TOKEN: ${SLACK_APP_TOKEN}
+      SLACK_SIGNING_SECRET: ${SLACK_SIGNING_SECRET}
+
+      # OpenRouter API
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+
+      # Database Configuration
+      DATABASE_URL: postgresql://reportbot:reportbot_password@postgres:5432/reportbot
+
+      # Bot Configuration
+      TIMEZONE: ${TIMEZONE:-America/New_York}
+      AI_MODEL: ${AI_MODEL:-google/gemini-2.0-flash-exp:free}
+      CONFIG_FILE: ${CONFIG_FILE:-config.json}
+    volumes:
+      # Mount config.json for hot reload without rebuilding
+      - ./config.json:/app/config.json:ro
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  default:
+    name: reportbot-network
