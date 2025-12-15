@@ -37,9 +37,5 @@ RUN useradd -m -u 1000 botuser && \
 # Switch to non-root user
 USER botuser
 
-# Health check (optional - checks if process is running)
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD pgrep -f "python app.py" || exit 1
-
 # Run the application
 CMD ["python", "app.py"]
