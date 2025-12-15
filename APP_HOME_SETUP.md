@@ -7,7 +7,7 @@ The reportbot now includes a Slack App Home dashboard that displays all generate
 - View all historical daily report summaries
 - Summaries are automatically sorted by date (newest first)
 - Click "View Details" to see the full master report and team summaries
-- Persistent storage using SQLite database
+- Persistent storage using PostgreSQL database
 
 ## Setup Instructions
 
@@ -30,16 +30,24 @@ The app needs these OAuth scopes:
 - `im:history` - to read direct messages
 - `app_mentions:read` - to receive mentions
 
-### 3. Run the Bot
+### 3. Configure Database
+
+Make sure you have set up your PostgreSQL database and added the `DATABASE_URL` environment variable to your `.env` file:
+
+```
+DATABASE_URL=postgresql://username:password@host:port/database
+```
+
+The database tables will be created automatically when the bot starts.
+
+### 4. Run the Bot
 
 Start the bot as usual:
 ```bash
 python app.py
 ```
 
-The SQLite database (`summaries.db`) will be created automatically in the project root directory.
-
-### 4. Access the Dashboard
+### 5. Access the Dashboard
 
 1. Open Slack
 2. Find your reportbot in the Apps section
@@ -50,7 +58,7 @@ The SQLite database (`summaries.db`) will be created automatically in the projec
 ## How It Works
 
 ### Database Storage
-- All generated summaries are automatically saved to `summaries.db`
+- All generated summaries are automatically saved to PostgreSQL
 - Each summary includes:
   - Date of the report
   - Master summary text
@@ -75,7 +83,7 @@ When you click "View Details":
 ## File Structure
 
 New files added:
-- `utils/database.py` - SQLite database management
+- `utils/database.py` - PostgreSQL database management
 - `handlers/app_home.py` - App Home dashboard handlers
 
 Modified files:
@@ -86,12 +94,27 @@ Modified files:
 
 ```sql
 CREATE TABLE summaries (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     date TEXT NOT NULL,
     master_report TEXT NOT NULL,
-    channel_summaries TEXT NOT NULL,
+    channel_summaries JSONB NOT NULL,
     total_reports INTEGER NOT NULL,
-    created_at TEXT NOT NULL
+    created_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE active_collections (
+    channel_id TEXT PRIMARY KEY,
+    thread_ts TEXT NOT NULL,
+    created_at TIMESTAMP NOT NULL
+);
+
+CREATE TABLE collected_reports (
+    id SERIAL PRIMARY KEY,
+    channel_id TEXT NOT NULL,
+    user_id TEXT NOT NULL,
+    username TEXT NOT NULL,
+    text TEXT NOT NULL,
+    timestamp TEXT NOT NULL
 );
 ```
 
@@ -108,9 +131,11 @@ CREATE TABLE summaries (
 - Check that the bot has successfully generated at least one report
 
 ### Database errors
-- Ensure the bot has write permissions in the project directory
-- The `summaries.db` file will be created automatically
-- Check logs for specific database errors
+- Verify `DATABASE_URL` is correctly formatted in your `.env` file
+- Ensure PostgreSQL server is running and accessible
+- Check that the database exists and credentials are correct
+- Database tables will be created automatically on first run
+- Check logs for specific database connection errors
 
 ## Future Enhancements
 

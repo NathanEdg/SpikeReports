@@ -1,6 +1,6 @@
 # Slack Daily Report Bot
 
-A Python-based Slack bot that collects daily reports from team members and generates AI-powered summaries using OpenRouter.
+A Python-based Slack bot that collects daily reports from team members and generates AI-powered summaries using OpenRouter. Summaries are stored in a PostgreSQL database.
 
 ## Features
 
@@ -63,7 +63,23 @@ pip install -r requirements.txt
 3. Create a new API key (save as `OPENROUTER_API_KEY`)
 4. Add a payment method if needed for usage beyond free tier
 
-### 6. Configure Environment Variables
+### 6. Set Up PostgreSQL Database
+
+You'll need a PostgreSQL database to store generated summaries. You can use:
+- A local PostgreSQL installation
+- A cloud provider like [Heroku Postgres](https://www.heroku.com/postgres), [Supabase](https://supabase.com), [Railway](https://railway.app), or [Neon](https://neon.tech)
+
+The connection URL format is:
+```
+postgresql://username:password@host:port/database
+```
+
+Example:
+```
+postgresql://myuser:mypassword@localhost:5432/reportbot
+```
+
+### 7. Configure Environment Variables
 
 Copy `.env.example` to `.env` and fill in your values:
 
@@ -77,12 +93,13 @@ SLACK_BOT_TOKEN=xoxb-your-actual-bot-token
 SLACK_APP_TOKEN=xapp-your-actual-app-token
 SLACK_SIGNING_SECRET=your-actual-signing-secret
 OPENROUTER_API_KEY=your-actual-openrouter-key
+DATABASE_URL=postgresql://username:password@host:port/database
 TIMEZONE=America/New_York
 AI_MODEL=google/gemini-2.0-flash-exp:free
 CONFIG_FILE=config.json
 ```
 
-### 7. Configure Channels
+### 8. Configure Channels
 
 Edit `config.json` to specify your channels and subteams:
 
@@ -173,7 +190,8 @@ reportbot/
 │   └── openrouter.py              # OpenRouter API client
 └── utils/
     ├── logger.py                  # Logging configuration
-    └── storage.py                 # In-memory report storage
+    ├── storage.py                 # In-memory report storage
+    └── database.py                # PostgreSQL database management
 ```
 
 ## Troubleshooting
@@ -196,6 +214,12 @@ reportbot/
 **Wrong timezone:**
 - Update `TIMEZONE` in `.env` to your preferred timezone
 - Valid values: `America/New_York`, `America/Los_Angeles`, `UTC`, etc.
+
+**Database connection errors:**
+- Verify `DATABASE_URL` is correctly formatted
+- Ensure PostgreSQL server is running and accessible
+- Check that database exists and credentials are correct
+- Review logs for specific connection errors
 
 ## License
 
